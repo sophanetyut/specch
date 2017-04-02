@@ -45,12 +45,20 @@ namespace specch
         
         private void Form1_Load(object sender, EventArgs e)
         {
-            Listener = new SpeechRecognitionEngine();
-            _recognizer = new SpeechRecognitionEngine();
-            KNOCK = new SpeechSynthesizer();
+            try
+            {
+                Listener = new SpeechRecognitionEngine();
+                _recognizer = new SpeechRecognitionEngine();
+                KNOCK = new SpeechSynthesizer();
 
-            CMDLoad();//load command in to array by calling the Array method
-            loadSpeech();//instanciate the object of speech engine and configure the requirement
+                CMDLoad();//load command in to array by calling the Array method
+                loadSpeech();//instanciate the object of speech engine and configure the requirement
+            }
+            catch (Exception)
+            {
+                KNOCK.Speak("Sorry user. I can't find your microphone signal. please make sure your microphone is working.");
+            }
+            
             SystemEvents.PowerModeChanged +=new PowerModeChangedEventHandler(SystemEvents_PowerModeChanged);
         }
         
@@ -109,18 +117,19 @@ namespace specch
         void loadSpeech()
         {
             _recognizer.SetInputToDefaultAudioDevice();
-            //_recognizer.LoadGrammar(new DictationGrammar());
+            _recognizer.LoadGrammar(new DictationGrammar());
             _recognizer.LoadGrammar(new Grammar(new GrammarBuilder(new Choices(arr[6].Concat(arr[1].Concat(arr[2].Concat(arr[0]))).ToArray()))));
             _recognizer.SpeechRecognized += new EventHandler<SpeechRecognizedEventArgs>(_recognizer_SpeechRecognized);
             _recognizer.RecognizeAsync(RecognizeMode.Multiple);
             //KNOCK.SelectVoiceByHints(VoiceGender.Female);
 
             Listener.SetInputToDefaultAudioDevice();
+          //  Listener.SetInputToNull();
             Listener.LoadGrammar(new DictationGrammar());
             Listener.LoadGrammar(new Grammar(new GrammarBuilder(new Choices(new string[] {"come back"}))));
             Listener.SpeechRecognized += new EventHandler<SpeechRecognizedEventArgs>(Listen_control);
+            Listener.RecognizeAsync(RecognizeMode.Multiple);
             Listener.RecognizeAsyncStop();
-            
         }
 
         private void Listen_control(object sender, SpeechRecognizedEventArgs e)
@@ -150,9 +159,9 @@ namespace specch
         
         private void child_Thread()// thread will call this function
         {
-            pictureBox1.Visible = true;
+          //  pictureBox1.Visible = true;
             KNOCK.Speak(respon);
-            pictureBox1.Visible = false;
+          //  pictureBox1.Visible = false;
         }
         
         void getSpeech(string s)//After we found the "string s" that got from _recognizer_SpeechRecognized then we will take decision for respon
@@ -257,7 +266,7 @@ namespace specch
                     call_Thread("show");
                     break;
                 case "stop listening":
-                    _recognizer.RecognizeAsyncStop();
+                     _recognizer.RecognizeAsyncStop();
                     Listener.RecognizeAsync(RecognizeMode.Multiple);
                     call_Thread("I will be back when you call me");
                     break;
@@ -346,18 +355,19 @@ namespace specch
                     axWindowsMediaPlayer1.Ctlcontrols.pause();
                     break;
                 case "load music":
-                    //loadMusic();
+                    KNOCK.Speak("sir, please select your music.");
+                    CreateNewPlaylist();
                     break;
 
 
                 //SHUTDOWN RESTART LOGOFF .......................................................
                 case "shutdown":
-                    System.Diagnostics.Process.Start("shutdown", "-s -t 100");
                     call_Thread("sir, i will shutdown your computer in next one minute.");
+                    System.Diagnostics.Process.Start("shutdown", "-s -t 100");
                     break;
                 case "restart":
-                    System.Diagnostics.Process.Start("shutdown", "-r -t 1000");
                     call_Thread("sir i will restart your computer in next one minute.");
+                    System.Diagnostics.Process.Start("shutdown", "-r -t 1000");
                     break;
                 case "sign out my computer":
                     System.Diagnostics.Process.Start("shutdown", "-l -f");
@@ -365,12 +375,11 @@ namespace specch
                 case "lock desktop":
                     call_Thread("yes sir. your computer is locked");
                     System.Diagnostics.Process.Start("rundll32.exe", "user32.dll, LockWorkStation");
-                    
                     break;
                 case "cancel shutdown":
                 case "cancel restart":
-                    System.Diagnostics.Process.Start("shutdown", " -a");
                     call_Thread("Canceled");
+                    System.Diagnostics.Process.Start("shutdown", " -a");
                     break;
 
                 //User_add_command..........................................................
@@ -382,7 +391,6 @@ namespace specch
                         FormState = false;
                         this.Hide();
                     }
-                    
                     break;
                 case "show command":
                     listBox1.Visible = true;
@@ -482,11 +490,14 @@ namespace specch
         private void playMusic()// load the music to play after user called "play music"
         {
             open.Multiselect = true;
+            axWindowsMediaPlayer1.URL = @"C:\Users\AnonymousCambodia\Music\Playlists\NU_Playlist.wpl";
+            axWindowsMediaPlayer1.Ctlcontrols.play();
+        }
 
-            WMPLib.IWMPPlaylist playlist = axWindowsMediaPlayer1.playlistCollection.newPlaylist("NU Playlist");
+        private void CreateNewPlaylist()
+        {
+            WMPLib.IWMPPlaylist playlist = axWindowsMediaPlayer1.playlistCollection.newPlaylist("NU_Playlist");
             WMPLib.IWMPMedia media;
-            //   media=axWindowsMediaPlayer1.newMedia()
-            //          axWindowsMediaPlayer1.currentPlaylist = playlist;
             if (open.ShowDialog() == DialogResult.OK)
             {
                 FileName = open.FileNames;
@@ -497,9 +508,8 @@ namespace specch
                 }
                 axWindowsMediaPlayer1.currentPlaylist = playlist;
             }
-
         }
-        
+
         private void listBox1_MouseClick(object sender, MouseEventArgs e)  //speak the command after the user click on it... 
         {
             call_Thread(listBox1.SelectedItem.ToString());
